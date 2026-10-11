@@ -1,0 +1,54 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment files (never commit real .env)
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.map-preview-qa/
+
+# Local caches, temporary files and credentials
+.cache/
+.vite/
+.eslintcache
+playwright-report/
+test-results/
+*.tmp
+*.bak
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
