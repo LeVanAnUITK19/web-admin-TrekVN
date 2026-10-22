@@ -43,6 +43,7 @@ export interface Place {
   name: string
   provinceId?: string // Tỉnh ID theo chuẩn mới
   province: string // Tên tỉnh (legacy hoặc display)
+  mien?: 'mien-bac' | 'mien-trung' | 'mien-nam' // Vùng miền
   description: string
   difficulty: Difficulty
   coordinates: GeoPoint
@@ -69,6 +70,7 @@ export interface Place {
 export interface PlaceFormData {
   name: string
   provinceId: string
+  mien: 'mien-bac' | 'mien-trung' | 'mien-nam'
   description: string
   difficulty: Difficulty
   latitude: number
@@ -167,6 +169,7 @@ export interface PlaceListParams {
   limit?: number
   search?: string
   province?: string
+  mien?: 'mien-bac' | 'mien-trung' | 'mien-nam' | ''
   difficulty?: Difficulty | ''
   status?: PlaceStatus | ''
 }

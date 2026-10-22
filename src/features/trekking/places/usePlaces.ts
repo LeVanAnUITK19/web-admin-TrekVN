@@ -100,6 +100,7 @@ async function createPlace(data: PlaceFormData): Promise<Place> {
       name: data.name,
       provinceId: data.provinceId,
       province: data.provinceId, // Will be resolved by backend
+      mien: data.mien,
       address: data.address,
       description: data.description,
       difficulty: data.difficulty,
@@ -124,6 +125,7 @@ async function createPlace(data: PlaceFormData): Promise<Place> {
   const payload: Record<string, unknown> = {
     name: data.name,
     provinceId: data.provinceId,
+    mien: data.mien,
     location: { type: 'Point', coordinates: [data.longitude, data.latitude] },
     difficulty: data.difficulty,
     description: data.description,
@@ -173,6 +175,7 @@ async function updatePlace(id: string, data: Partial<PlaceFormData>): Promise<Pl
     const updated: Place = { ...mockPlaceStore[idx], updatedAt: new Date().toISOString() }
     if (data.name !== undefined) updated.name = data.name
     if (data.provinceId !== undefined) { updated.provinceId = data.provinceId; updated.province = data.provinceId }
+    if (data.mien !== undefined) updated.mien = data.mien
     if (data.address !== undefined) updated.address = data.address
     if (data.description !== undefined) updated.description = data.description
     if (data.difficulty !== undefined) updated.difficulty = data.difficulty
@@ -196,6 +199,7 @@ async function updatePlace(id: string, data: Partial<PlaceFormData>): Promise<Pl
   const payload: Record<string, unknown> = {}
   if (data.name !== undefined) payload.name = data.name
   if (data.provinceId !== undefined) payload.provinceId = data.provinceId
+  if (data.mien !== undefined) payload.mien = data.mien
   if (data.address !== undefined) payload.address = data.address
   if (data.description !== undefined) payload.description = data.description
   if (data.difficulty !== undefined) payload.difficulty = data.difficulty

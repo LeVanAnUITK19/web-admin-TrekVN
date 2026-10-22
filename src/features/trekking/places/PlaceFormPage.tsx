@@ -12,6 +12,7 @@ import type { Place } from '@/types'
 const schema = z.object({
   name: z.string().min(2, 'Tên địa điểm phải từ 2 ký tự').max(200, 'Tên tối đa 200 ký tự'),
   provinceId: z.string().min(1, 'Chọn tỉnh/thành phố'),
+  mien: z.enum(['mien-bac', 'mien-trung', 'mien-nam'], { required_error: 'Chọn vùng miền' }),
   address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
   description: z.string().min(10, 'Mô tả phải từ 10 ký tự').max(5000, 'Mô tả tối đa 5000 ký tự'),
   difficulty: z.enum(['EASY', 'MODERATE', 'HARD', 'EXPERT']),
@@ -70,6 +71,7 @@ export default function PlaceFormPage({ editPlace }: PlaceFormPageProps) {
     defaultValues: {
       name: '',
       provinceId: '',
+      mien: 'mien-bac',
       address: '',
       description: '',
       difficulty: 'EASY',
@@ -88,6 +90,7 @@ export default function PlaceFormPage({ editPlace }: PlaceFormPageProps) {
       reset({
         name: editPlace.name,
         provinceId: editPlace.provinceId || editPlace.province,
+        mien: editPlace.mien || 'mien-bac',
         address: editPlace.address || '',
         description: editPlace.description,
         difficulty: editPlace.difficulty,
@@ -162,6 +165,7 @@ export default function PlaceFormPage({ editPlace }: PlaceFormPageProps) {
     const payload = {
       name: data.name,
       provinceId: data.provinceId,
+      mien: data.mien,
       address: data.address,
       description: data.description,
       difficulty: data.difficulty,
@@ -256,6 +260,19 @@ export default function PlaceFormPage({ editPlace }: PlaceFormPageProps) {
                     ))}
                   </select>
                   {errors.provinceId && <p className="form-error">{errors.provinceId.message}</p>}
+                </div>
+
+                <div>
+                  <label className="form-label block mb-1">
+                    Vùng miền <span className="text-destructive">*</span>
+                  </label>
+                  <select {...register('mien')} className={inputCls(!!errors.mien)}>
+                    <option value="">Chọn vùng miền</option>
+                    <option value="mien-bac">Miền Bắc</option>
+                    <option value="mien-trung">Miền Trung</option>
+                    <option value="mien-nam">Miền Nam</option>
+                  </select>
+                  {errors.mien && <p className="form-error">{errors.mien.message}</p>}
                 </div>
 
                 <div>

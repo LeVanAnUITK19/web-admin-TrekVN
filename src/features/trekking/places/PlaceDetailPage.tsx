@@ -184,6 +184,17 @@ export default function PlaceDetailPage() {
                 </span>
               </div>
               <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Vùng miền</label>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
+                    {place.mien === 'mien-bac' ? 'Miền Bắc' :
+                     place.mien === 'mien-trung' ? 'Miền Trung' :
+                     place.mien === 'mien-nam' ? 'Miền Nam' : '—'}
+                  </span>
+                </div>
+              </div>
+              <div>
                 <label className="text-sm text-muted-foreground mb-1 block">Nguồn dữ liệu</label>
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-muted-foreground" />
