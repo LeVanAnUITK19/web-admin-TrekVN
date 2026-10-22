@@ -12,6 +12,7 @@ import type { Place } from '@/types'
 const schema = z.object({
   name: z.string().min(2, 'Tên phải từ 2 ký tự').max(200, 'Tên tối đa 200 ký tự'),
   provinceId: z.string().min(1, 'Chọn tỉnh/thành'),
+  mien: z.enum(['mien-bac', 'mien-trung', 'mien-nam'], { required_error: 'Chọn vùng miền' }),
   address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
   description: z.string().min(10, 'Mô tả phải từ 10 ký tự').max(5000, 'Mô tả tối đa 5000 ký tự'),
   difficulty: z.enum(['EASY', 'MODERATE', 'HARD', 'EXPERT']),
@@ -41,7 +42,7 @@ export function PlaceFormDialog({ open, onOpenChange, place }: PlaceFormDialogPr
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '', provinceId: '', address: '', description: '', difficulty: 'EASY',
+      name: '', provinceId: '', mien: 'mien-bac', address: '', description: '', difficulty: 'EASY',
       averageDurationMinutes: undefined, elevationMeters: undefined,
       latitude: 14, longitude: 108, imageMapUrl: '', tags: '', dataOrigin: 'MANUAL', status: 'ACTIVE',
     },
@@ -52,6 +53,7 @@ export function PlaceFormDialog({ open, onOpenChange, place }: PlaceFormDialogPr
       reset({
         name: place.name,
         provinceId: place.provinceId || place.province, // fallback for old data
+        mien: place.mien || 'mien-bac',
         address: place.address || '',
         description: place.description,
         difficulty: place.difficulty,
@@ -65,7 +67,7 @@ export function PlaceFormDialog({ open, onOpenChange, place }: PlaceFormDialogPr
         status: place.status === 'DISABLED' ? 'INACTIVE' : place.status,
       })
     } else {
-      reset({ name: '', provinceId: '', address: '', description: '', difficulty: 'EASY',
+      reset({ name: '', provinceId: '', mien: 'mien-bac', address: '', description: '', difficulty: 'EASY',
         averageDurationMinutes: undefined, elevationMeters: undefined,
         latitude: 14, longitude: 108, imageMapUrl: '', tags: '', dataOrigin: 'MANUAL', status: 'ACTIVE' })
     }
@@ -75,6 +77,7 @@ export function PlaceFormDialog({ open, onOpenChange, place }: PlaceFormDialogPr
     const payload = {
       name: data.name,
       provinceId: data.provinceId,
+      mien: data.mien,
       address: data.address,
       description: data.description,
       difficulty: data.difficulty,
@@ -127,6 +130,14 @@ export function PlaceFormDialog({ open, onOpenChange, place }: PlaceFormDialogPr
               <select {...register('provinceId')} className={inputCls(!!errors.provinceId)}>
                 <option value="">Chọn tỉnh/thành</option>
                 {PROVINCE_OPTIONS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
+            {field('Vùng miền', errors.mien?.message,
+              <select {...register('mien')} className={inputCls(!!errors.mien)}>
+                <option value="">Chọn vùng miền</option>
+                <option value="mien-bac">Miền Bắc</option>
+                <option value="mien-trung">Miền Trung</option>
+                <option value="mien-nam">Miền Nam</option>
               </select>
             )}
             {field('Địa chỉ', errors.address?.message,
