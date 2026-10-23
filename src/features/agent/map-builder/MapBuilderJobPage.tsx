@@ -48,7 +48,8 @@ export default function MapBuilderJobPage() {
   if (isLoading) return <div className="p-6"><TableSkeleton /></div>
   if (isError || !artifact) return <ErrorState retry={() => window.location.reload()} />
 
-  const isPublished = !!publishResult
+  // Job đã published nếu có r2ObjectKey hoặc publishedAt từ backend, hoặc publishResult từ mutation
+  const isPublished = !!publishResult || !!artifact.r2ObjectKey || !!artifact.publishedAt
 
   const handlePublishConfirm = async () => {
     setPublishStep('publishing')
