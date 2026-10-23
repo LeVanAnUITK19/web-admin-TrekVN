@@ -22,10 +22,12 @@ export interface MapPreviewProps {
   milestone?: GeoPoint | null
   placeName: string
   className?: string
+  overlayRoutes?: Array<{ path: GeoLineString; name: string }>
+  overlayMilestones?: Array<{ coordinates: GeoPoint; name: string; sequence: number }>
 }
 
 /** The only tile source is the ZIP created by this job, read locally via SQLite. */
-export function MapPreview({ jobId, placeId, downloadUrl, checksum, fileName, bbox, path, location, milestone, placeName, className }: MapPreviewProps) {
+export function MapPreview({ jobId, placeId, downloadUrl, checksum, fileName, bbox, path, location, milestone, placeName, className, overlayRoutes, overlayMilestones }: MapPreviewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -144,6 +146,90 @@ export function MapPreview({ jobId, placeId, downloadUrl, checksum, fileName, bb
     for (const id of ['entity-path', 'entity-points']) if (style.sources[id]) current.addSource(id, style.sources[id])
     style.layers.filter(layer => ['entity-path-line', 'entity-point-circles'].includes(layer.id)).forEach(layer => current.addLayer(layer))
   }, [path, location, milestone, phase])
+
+  // Render overlay routes
+  useEffect(() => {
+    if (phase !== 'ready' || !map.current) return
+    const currentMap = map.current
+
+    // Remove existing overlay routes
+    if (currentMap.getLayer('overlay-routes')) currentMap.removeLayer('overlay-routes')
+    if (currentMap.getSource('overlay-routes')) currentMap.removeSource('overlay-routes')
+
+    if (!overlayRoutes || overlayRoutes.length === 0) return
+
+    // Add routes
+    const routesFeatures = overlayRoutes.map((route) => ({
+      type: 'Feature' as const,
+      properties: { name: route.name },
+      geometry: route.path,
+    }))
+
+    currentMap.addSource('overlay-routes', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: routesFeatures },
+    })
+
+    currentMap.addLayer({
+      id: 'overlay-routes',
+      type: 'line',
+      source: 'overlay-routes',
+      paint: { 'line-color': '#3b82f6', 'line-width': 3, 'line-opacity': 0.8 },
+    })
+  }, [phase, overlayRoutes])
+
+  // Render overlay milestones
+  useEffect(() => {
+    if (phase !== 'ready' || !map.current) return
+    const currentMap = map.current
+
+    // Remove existing overlay milestones
+    if (currentMap.getLayer('overlay-milestones-labels')) currentMap.removeLayer('overlay-milestones-labels')
+    if (currentMap.getLayer('overlay-milestones')) currentMap.removeLayer('overlay-milestones')
+    if (currentMap.getSource('overlay-milestones')) currentMap.removeSource('overlay-milestones')
+
+    if (!overlayMilestones || overlayMilestones.length === 0) return
+
+    // Add milestones
+    const milestonesFeatures = overlayMilestones.map((m) => ({
+      type: 'Feature' as const,
+      properties: { name: m.name, sequence: m.sequence },
+      geometry: m.coordinates,
+    }))
+
+    currentMap.addSource('overlay-milestones', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: milestonesFeatures },
+    })
+
+    currentMap.addLayer({
+      id: 'overlay-milestones',
+      type: 'circle',
+      source: 'overlay-milestones',
+      paint: {
+        'circle-radius': 6,
+        'circle-color': '#ef4444',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+    })
+
+    currentMap.addLayer({
+      id: 'overlay-milestones-labels',
+      type: 'symbol',
+      source: 'overlay-milestones',
+      layout: {
+        'text-field': ['get', 'sequence'],
+        'text-size': 10,
+        'text-offset': [0, -1.5],
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#ef4444',
+        'text-halo-width': 1,
+      },
+    })
+  }, [phase, overlayMilestones])
 
   const milestoneLng = milestone?.coordinates[0]
   const milestoneLat = milestone?.coordinates[1]

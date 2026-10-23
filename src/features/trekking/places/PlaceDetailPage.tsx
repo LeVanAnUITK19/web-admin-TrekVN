@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, MapPin, Clock, Mountain, Edit, Image as ImageIcon, Calendar, Database, Map, Download } from 'lucide-react'
-import { PlaceOfflineMap } from '@/components/map/PlaceOfflineMap'
+import { PlaceOfflineMapWithOverlays } from '@/components/map/PlaceOfflineMapWithOverlays'
 import { PageLoader } from '@/components/feedback/PageLoader'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -277,7 +277,7 @@ export default function PlaceDetailPage() {
               </div>
             </div>
 
-              <PlaceOfflineMap
+              <PlaceOfflineMapWithOverlays
                 placeId={place.id}
                 location={coordinates}
                 placeName={place.name}
