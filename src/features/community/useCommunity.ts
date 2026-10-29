@@ -1,168 +1,94 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { IS_MOCK_MODE, DEFAULT_PAGE_SIZE } from '@/constants'
-import { mockPosts, mockComments, mockReviews } from '@/mocks/community'
-import type { Post, Comment, Review, CommunityListParams } from '@/types'
+import axios from 'axios'
+import { toast } from 'sonner'
 import apiClient from '@/services/api/client'
 import { ENDPOINTS } from '@/services/api/endpoints'
-import { sleep } from '@/lib/utils'
-import { toast } from 'sonner'
+import type {
+  Post, Comment, CommunityListParams, PaginatedResponse, AdminPostDetail,
+  CommunityAction, CommunityEntity, ModerationLog, PostStatus,
+} from '@/types'
 
-// eslint-disable-next-line prefer-const
-let mockPostStore = [...mockPosts]
-// eslint-disable-next-line prefer-const
-let mockCommentStore = [...mockComments]
-// eslint-disable-next-line prefer-const
-let mockReviewStore = [...mockReviews]
+interface ModerationFields {
+  status: PostStatus
+  moderationReason?: string | null
+  moderatedBy?: string | null
+  moderatedAt?: string | null
+}
+interface PostDto extends ModerationFields {
+  postId: string; authorId: string; authorName: string; authorAvatar: string | null
+  content: string; images: string[]; type: Post['type']; visibility: Post['visibility']
+  journeyId: string | null; trekkingPlaceId: string | null
+  reactionCount: number; commentCount: number; createdAt: string; updatedAt: string
+}
+interface CommentDto extends ModerationFields {
+  commentId: string; postId: string; authorId: string; authorName: string; authorAvatar: string | null
+  content: string; likeCount: number; createdAt: string; updatedAt: string
+  parentCommentId: string | null; rootCommentId: string | null; postContent: string; postStatus: PostStatus
+}
+interface PageDto<T> { items: T[]; total: number; page: number; limit: number; totalPages: number }
 
-// ---- Posts ----
-async function fetchPosts(params: CommunityListParams) {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    let result = [...mockPostStore]
-    if (params.search) {
-      const q = params.search.toLowerCase()
-      result = result.filter((p) => p.title.toLowerCase().includes(q) || p.author.name.toLowerCase().includes(q))
-    }
-    if (params.status) result = result.filter((p) => p.status === params.status)
-    const total = result.length
-    const page = params.page ?? 1
-    const limit = params.limit ?? DEFAULT_PAGE_SIZE
-    return { data: result.slice((page - 1) * limit, page * limit), total, page, limit, totalPages: Math.ceil(total / limit) }
+export function communityError(error: unknown): string {
+  if (axios.isAxiosError<{ error?: { message?: string }; message?: string }>(error)) {
+    if (error.response?.status === 403) return 'Tài khoản không có quyền quản trị nội dung cộng đồng.'
+    if (error.response?.status === 404) return 'Không tìm thấy nội dung hoặc API quản trị Community chưa được triển khai.'
+    return error.response?.data?.error?.message ?? error.response?.data?.message ?? 'Không kết nối được máy chủ. Vui lòng thử lại.'
   }
-  const res = await apiClient.get(ENDPOINTS.ADMIN_POSTS, { params })
-  return res.data.data
+  return error instanceof Error ? error.message : 'Thao tác thất bại. Vui lòng thử lại.'
 }
-
-async function hidePost(id: string): Promise<Post> {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    const idx = mockPostStore.findIndex((p) => p.id === id)
-    if (idx === -1) throw new Error('Không tìm thấy bài viết')
-    mockPostStore[idx] = { ...mockPostStore[idx], status: 'HIDDEN' }
-    return mockPostStore[idx]
+function mapPost(p: PostDto): Post {
+  return {
+    id: p.postId, title: p.content.slice(0, 90) || (p.status === 'DELETED' ? 'Bài viết đã xóa' : 'Bài viết chỉ có ảnh'),
+    content: p.content, images: p.images,
+    author: { id: p.authorId, name: p.authorName, avatarUrl: p.authorAvatar ?? undefined },
+    status: p.status, likesCount: p.reactionCount, commentsCount: p.commentCount,
+    type: p.type, visibility: p.visibility, journeyId: p.journeyId,
+    placeId: p.trekkingPlaceId ?? undefined, createdAt: p.createdAt, updatedAt: p.updatedAt,
+    moderationReason: p.moderationReason, moderatedBy: p.moderatedBy, moderatedAt: p.moderatedAt,
   }
-  const res = await apiClient.patch(ENDPOINTS.ADMIN_POST_HIDE(id))
-  return res.data.data
 }
-
-async function deletePost(id: string): Promise<void> {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    const idx = mockPostStore.findIndex((p) => p.id === id)
-    if (idx === -1) throw new Error('Không tìm thấy bài viết')
-    mockPostStore[idx] = { ...mockPostStore[idx], status: 'DELETED' }
-    return
+function mapComment(c: CommentDto): Comment {
+  return {
+    id: c.commentId, postId: c.postId, content: c.content, postTitle: c.postContent,
+    author: { id: c.authorId, name: c.authorName, avatarUrl: c.authorAvatar ?? undefined },
+    status: c.status, likesCount: c.likeCount, createdAt: c.createdAt, updatedAt: c.updatedAt,
+    parentCommentId: c.parentCommentId, rootCommentId: c.rootCommentId, postStatus: c.postStatus,
+    moderationReason: c.moderationReason, moderatedBy: c.moderatedBy, moderatedAt: c.moderatedAt,
   }
-  await apiClient.delete(ENDPOINTS.ADMIN_POST(id))
+}
+function mapPage<T, U>(page: PageDto<T>, map: (item: T) => U): PaginatedResponse<U> {
+  return { data: page.items.map(map), total: page.total, page: page.page, limit: page.limit, totalPages: page.totalPages }
 }
 
-// ---- Comments ----
-async function fetchComments(params: CommunityListParams) {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    let result = [...mockCommentStore]
-    if (params.search) {
-      const q = params.search.toLowerCase()
-      result = result.filter((c) => c.content.toLowerCase().includes(q) || c.author.name.toLowerCase().includes(q))
-    }
-    if (params.status) result = result.filter((c) => c.status === params.status)
-    const total = result.length
-    const page = params.page ?? 1
-    const limit = params.limit ?? DEFAULT_PAGE_SIZE
-    return { data: result.slice((page - 1) * limit, page * limit), total, page, limit, totalPages: Math.ceil(total / limit) }
-  }
-  const res = await apiClient.get(ENDPOINTS.ADMIN_COMMENTS, { params })
-  return res.data.data
+// Community administration always uses the real API, including when another
+// older module still has mock mode enabled. Failures are visible, not replaced.
+export function usePosts(params: CommunityListParams, enabled = true) {
+  return useQuery({ queryKey: ['community', 'posts', params], enabled, queryFn: async ({ signal }) => {
+    const res = await apiClient.get<{ data: PageDto<PostDto> }>(ENDPOINTS.ADMIN_POSTS, { params, signal })
+    return mapPage(res.data.data, mapPost)
+  } })
 }
-
-async function hideComment(id: string): Promise<Comment> {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    const idx = mockCommentStore.findIndex((c) => c.id === id)
-    if (idx === -1) throw new Error('Không tìm thấy bình luận')
-    mockCommentStore[idx] = { ...mockCommentStore[idx], status: 'HIDDEN' }
-    return mockCommentStore[idx]
-  }
-  const res = await apiClient.patch(ENDPOINTS.ADMIN_COMMENT_HIDE(id))
-  return res.data.data
+export function useComments(params: CommunityListParams, enabled = true) {
+  return useQuery({ queryKey: ['community', 'comments', params], enabled, queryFn: async ({ signal }) => {
+    const res = await apiClient.get<{ data: PageDto<CommentDto> }>(ENDPOINTS.ADMIN_COMMENTS, { params, signal })
+    return mapPage(res.data.data, mapComment)
+  } })
 }
-
-// ---- Reviews ----
-async function fetchReviews(params: CommunityListParams) {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    let result = [...mockReviewStore]
-    if (params.search) {
-      const q = params.search.toLowerCase()
-      result = result.filter((r) => r.content.toLowerCase().includes(q) || r.author.name.toLowerCase().includes(q))
-    }
-    if (params.status) result = result.filter((r) => r.status === params.status)
-    const total = result.length
-    const page = params.page ?? 1
-    const limit = params.limit ?? DEFAULT_PAGE_SIZE
-    return { data: result.slice((page - 1) * limit, page * limit), total, page, limit, totalPages: Math.ceil(total / limit) }
-  }
-  const res = await apiClient.get(ENDPOINTS.ADMIN_REVIEWS, { params })
-  return res.data.data
+export function usePostDetail(id: string | null) {
+  return useQuery<AdminPostDetail>({ queryKey: ['community', 'detail', id], enabled: !!id, queryFn: async ({ signal }) => {
+    const res = await apiClient.get<{ data: { post: PostDto; recentActions: ModerationLog[] } }>(ENDPOINTS.ADMIN_POST(id!), { signal })
+    return { post: mapPost(res.data.data.post), recentActions: res.data.data.recentActions }
+  } })
 }
-
-async function hideReview(id: string): Promise<Review> {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    const idx = mockReviewStore.findIndex((r) => r.id === id)
-    if (idx === -1) throw new Error('Không tìm thấy đánh giá')
-    mockReviewStore[idx] = { ...mockReviewStore[idx], status: 'HIDDEN' }
-    return mockReviewStore[idx]
-  }
-  const res = await apiClient.patch(ENDPOINTS.ADMIN_REVIEW_HIDE(id))
-  return res.data.data
-}
-
-// ---- Hooks ----
-export function usePosts(params: CommunityListParams) {
-  return useQuery({ queryKey: ['posts', params], queryFn: () => fetchPosts(params), placeholderData: (p) => p })
-}
-
-export function useHidePost() {
+export function useModerateCommunity() {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: hidePost,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['posts'] }); toast.success('Đã ẩn bài viết') },
-    onError: (err: Error) => toast.error(err.message),
-  })
-}
-
-export function useDeletePost() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: deletePost,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['posts'] }); toast.success('Đã xóa bài viết') },
-    onError: (err: Error) => toast.error(err.message),
-  })
-}
-
-export function useComments(params: CommunityListParams) {
-  return useQuery({ queryKey: ['comments', params], queryFn: () => fetchComments(params), placeholderData: (p) => p })
-}
-
-export function useHideComment() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: hideComment,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['comments'] }); toast.success('Đã ẩn bình luận') },
-    onError: (err: Error) => toast.error(err.message),
-  })
-}
-
-export function useReviews(params: CommunityListParams) {
-  return useQuery({ queryKey: ['reviews', params], queryFn: () => fetchReviews(params), placeholderData: (p) => p })
-}
-
-export function useHideReview() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: hideReview,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reviews'] }); toast.success('Đã ẩn đánh giá') },
-    onError: (err: Error) => toast.error(err.message),
-  })
+  return useMutation({ mutationFn: async ({ entity, id, action, reason }: {
+    entity: CommunityEntity; id: string; action: CommunityAction; reason: string
+  }) => {
+    const path = entity === 'posts' ? ENDPOINTS.ADMIN_POST(id) : ENDPOINTS.ADMIN_COMMENT(id)
+    if (action === 'delete') await apiClient.delete(path, { data: { reason } })
+    else await apiClient.patch(`${path}/${action}`, { reason })
+  }, onSuccess: async (_, input) => {
+    await qc.invalidateQueries({ queryKey: ['community'] })
+    toast.success(input.action === 'hide' ? 'Đã ẩn nội dung' : input.action === 'publish' ? 'Đã hiển thị lại nội dung' : 'Đã xóa nội dung')
+  } })
 }

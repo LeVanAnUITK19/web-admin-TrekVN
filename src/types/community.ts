@@ -21,6 +21,12 @@ export interface Post {
   updatedAt: string
   placeId?: string
   placeName?: string
+  type?: 'NORMAL' | 'JOURNEY_SHARE' | 'BADGE_SHARE'
+  visibility?: 'PUBLIC' | 'PRIVATE'
+  journeyId?: string | null
+  moderationReason?: string | null
+  moderatedBy?: string | null
+  moderatedAt?: string | null
 }
 
 export interface Comment {
@@ -33,6 +39,12 @@ export interface Comment {
   likesCount: number
   createdAt: string
   updatedAt: string
+  parentCommentId?: string | null
+  rootCommentId?: string | null
+  postStatus?: PostStatus
+  moderationReason?: string | null
+  moderatedBy?: string | null
+  moderatedAt?: string | null
 }
 
 export interface Review {
@@ -54,4 +66,25 @@ export interface CommunityListParams {
   search?: string
   status?: string
   authorId?: string
+  visibility?: 'PUBLIC' | 'PRIVATE'
+  type?: 'NORMAL' | 'JOURNEY_SHARE' | 'BADGE_SHARE'
+  postId?: string
 }
+
+export interface ModerationLog {
+  logId: string
+  adminId: string
+  entityType: 'POST' | 'COMMENT'
+  entityId: string
+  action: 'HIDE' | 'PUBLISH' | 'DELETE'
+  reason: string
+  beforeStatus: PostStatus
+  afterStatus: PostStatus
+  createdAt: string
+}
+export interface AdminPostDetail {
+  post: Post
+  recentActions: ModerationLog[]
+}
+export type CommunityAction = 'hide' | 'publish' | 'delete'
+export type CommunityEntity = 'posts' | 'comments'
