@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { usePosts, useComments, usePostDetail, communityError } from './useCommunity'
 import { ModerationDialog, type ModerationTarget } from './ModerationDialog'
+import SocialAdmin from './SocialAdmin'
 import { formatDateTime, truncate } from '@/lib/utils'
 import { DEFAULT_PAGE_SIZE, ROUTES } from '@/constants'
 import type { Post, Comment, CommunityListParams, CommunityEntity, PostStatus } from '@/types'
@@ -90,6 +91,7 @@ function PostDetail({ id, onClose, choose }: { id: string | null; onClose: () =>
 }
 
 export default function CommunityPage() {
+  const [social, setSocial] = useState(false)
   const [tab, setTab] = useState<CommunityEntity>('posts')
   const [search, setSearch] = useState(''), [debounced, setDebounced] = useState('')
   const [page, setPage] = useState(1)
@@ -102,7 +104,7 @@ export default function CommunityPage() {
     ...(tab === 'posts' && visibility ? { visibility: visibility as Post['visibility'] } : {}),
     ...(tab === 'posts' && type ? { type: type as Post['type'] } : {}),
   }
-  const posts = usePosts(params, tab === 'posts'), comments = useComments(params, tab === 'comments')
+  const posts = usePosts(params, !social && tab === 'posts'), comments = useComments(params, !social && tab === 'comments')
   const query = tab === 'posts' ? posts : comments
   const data = query.data
   useEffect(() => {
@@ -110,7 +112,9 @@ export default function CommunityPage() {
   }, [data, page])
   function reset() { setSearch(''); setDebounced(''); setStatus(''); setVisibility(''); setType(''); setPage(1) }
 
+  if (social) return <SocialAdmin back={() => setSocial(false)} />
   return <div>
+    <div className="flex justify-end mb-3"><button onClick={() => setSocial(true)} className="border rounded-md px-4 py-2 text-sm text-primary bg-white">Nhóm & báo cáo tin nhắn</button></div>
     <PageHeader title="Quản lý bài viết cộng đồng" description="Theo dõi bài viết, xem ngữ cảnh và kiểm duyệt nội dung trên app." />
     <div className="flex items-center justify-between gap-3 mb-5">
       <Tabs.Root value={tab} onValueChange={(value) => { setTab(value as CommunityEntity); reset() }}>

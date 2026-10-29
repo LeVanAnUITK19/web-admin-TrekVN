@@ -1,5 +1,7 @@
 # Quản lý bài viết cộng đồng
 
+Mở rộng nhắn tin: nút **Nhóm & báo cáo tin nhắn** tại `/community`. `SocialAdmin.tsx` gọi `/admin/community/groups` và `/admin/community/message-reports`, lọc/phân trang, disable/enable nhóm và REMOVE/DISMISS báo cáo có lý do. Chỉ xem metadata nhóm/tin đã báo cáo, không xem toàn bộ DM. Chi tiết contract và DB ở `Backend-TrekVN/backend/docs/community-social-api.md`; cần deploy lại Auth, Community, Gateway và rebuild Admin. Kiểm thử phần mở rộng: `npx vitest run src/tests/community-social.test.tsx`.
+
 Màn `/community` dùng API thật qua Gateway, kể cả khi module cũ còn bật mock. Không thay lỗi API bằng dữ liệu mẫu.
 
 ```dotenv
@@ -23,7 +25,7 @@ Kiểm tra: `npx vitest run src/tests/community-api.test.tsx`, `npm run build`. 
 
 ## Kết quả kiểm tra cục bộ
 
-- Community: lint đạt, 8/8 test UI/API đạt; production build đạt. Giao diện đã xem trong trình duyệt ở desktop 1440px và màn hình nhỏ 390px với fixture cục bộ, không sửa dữ liệu production.
-- Backend Community: 33/33 test đạt; Gateway: 76/76 test đạt; E2E kiểm duyệt và WebSocket xuyên Gateway đạt. Flutter Community: 31/31 test đạt; analyze hai file tương thích tombstone không có lỗi.
-- Toàn bộ Web Admin: 82 test đạt, 2 test Milestone thất bại (danh sách nhóm cung đường không hiện dữ liệu fixture); suite Route status không tải được do môi trường jsdom thiếu `window.URL.createObjectURL`. Hai bộ này vẫn lỗi khi chạy riêng, không import màn Community. Chưa sửa các module ngoài Community trong lần thay đổi này.
+- Community: lint đạt, 12/12 test UI/API đạt (8 bài/bình luận + 4 nhóm/báo cáo); production build đạt. Không sửa dữ liệu production.
+- Backend Community: 45/45 test đạt; Gateway: 83/83 test đạt; Auth discovery đạt. E2E kiểm duyệt và chat riêng xuyên Gateway/WebSocket đạt, có xác nhận tài khoản ngoài cuộc trò chuyện không đọc/nhận được dữ liệu. Flutter Community: 42/42 test đạt; đã render UI dark theme và build APK debug Android có plugin QR.
+- Lần kiểm tra toàn bộ Web Admin trước phần mở rộng social ghi nhận 82 test đạt, 2 test Milestone thất bại; suite Route status thiếu `window.URL.createObjectURL` trong jsdom. Lần mở rộng này chỉ kiểm thử lại phạm vi Community và production build, không sửa module ngoài Community.
 - Chưa kiểm thử phiên ADMIN thực trên Render với API mới; cần deploy lại Community và Gateway trước khi chạy smoke test Web Admin.
