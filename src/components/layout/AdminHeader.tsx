@@ -13,6 +13,7 @@ interface AdminHeaderProps {
 const BREADCRUMB_MAP: Record<string, string> = {
   '/dashboard': 'Tổng quan',
   '/users': 'Người dùng',
+  '/trekking/reviews': 'Đánh giá địa điểm',
   '/trekking/places': 'Địa điểm',
   '/trekking/routes': 'Cung đường',
   '/trekking/milestones': 'Cột mốc',

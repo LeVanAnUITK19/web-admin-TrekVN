@@ -21,6 +21,7 @@ export const ROUTES = {
   TREKKING_MILESTONES_EDIT: (id: string) => `/trekking/milestones/${id}/edit`,
   CONTRIBUTIONS: '/contributions',
   COMMUNITY: '/community',
+  PLACE_REVIEWS: '/trekking/reviews',
   BADGES: '/badges',
   BADGES_CREATE: '/badges/create',
   BADGES_EDIT: (id: string) => `/badges/${id}/edit`,

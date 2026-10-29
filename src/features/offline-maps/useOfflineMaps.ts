@@ -140,9 +140,9 @@ async function deleteOfflineMap(id: string): Promise<void> {
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
-export function useOfflineMaps(params: OfflineMapListParams = {}) {
+export function useOfflineMaps(params: OfflineMapListParams = {}, enabled = true) {
   return useQuery({
-    queryKey: ['offline-maps', params],
+    queryKey: ['offline-maps', params], enabled,
     queryFn: () => fetchOfflineMaps(params),
     placeholderData: (p) => p,
   })
@@ -238,12 +238,7 @@ type ApiPlaceOfflineMap = {
   createdAt: string
 }
 
-async function fetchPlacesOfflineMaps(params: { search?: string; page?: number; limit?: number } = {}): Promise<PaginatedResponse<PlaceOfflineMapEntry>> {
-  if (IS_MOCK_MODE) {
-    await sleep(400)
-    // Mock: trả về danh sách rỗng (agent maps)
-    return { data: [], total: 0, page: 1, limit: DEFAULT_PAGE_SIZE, totalPages: 0 }
-  }
+async function fetchPlacesOfflineMaps(params: { search?: string; page?: number; limit?: number; available?: string } = {}): Promise<PaginatedResponse<PlaceOfflineMapEntry>> {
   const res = await apiClient.get<{ data: PaginatedResponse<ApiPlaceOfflineMap> }>(ENDPOINTS.ADMIN_PLACES_OFFLINE_MAPS, { params })
   // Backend trả về TrekkingPlace docs, map sang PlaceOfflineMapEntry shape
   const raw = res.data.data
@@ -254,10 +249,7 @@ async function fetchPlacesOfflineMaps(params: { search?: string; page?: number; 
     address: p.address,
     status: p.status,
     offlineMap: {
-      ...p.offlineMap,
-      downloadUrl: p.offlineMap?.objectKey
-        ? null // built by backend at runtime; we show objectKey for now
-        : null,
+      ...(p.offlineMap ?? { available: false, version: 0 }),
     },
     updatedAt: p.updatedAt,
     createdAt: p.createdAt,
@@ -282,7 +274,7 @@ async function updatePlaceOfflineMap(
   return res.data.data
 }
 
-export function usePlacesOfflineMaps(params: { search?: string; page?: number; limit?: number } = {}) {
+export function usePlacesOfflineMaps(params: { search?: string; page?: number; limit?: number; available?: string } = {}) {
   return useQuery({
     queryKey: ['places-offline-maps', params],
     queryFn: () => fetchPlacesOfflineMaps(params),
@@ -297,8 +289,36 @@ export function useUpdatePlaceOfflineMap() {
       updatePlaceOfflineMap(placeId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places-offline-maps'] })
+      qc.invalidateQueries({ queryKey: ['place'] })
+      qc.invalidateQueries({ queryKey: ['place-map-admin'] })
+      qc.invalidateQueries({ queryKey: ['places'] })
+      qc.invalidateQueries({ queryKey: ['place-offline-preview'] })
       toast.success('Đã cập nhật bản đồ địa điểm')
     },
     onError: (err: Error) => toast.error(err.message),
   })
+}
+
+export function usePlaceMapAdmin(placeId: string) {
+  return useQuery({
+    queryKey: ['place-map-admin', placeId], enabled: !!placeId,
+    queryFn: async ({ signal }) => {
+      const [place, map] = await Promise.all([
+        apiClient.get(ENDPOINTS.ADMIN_PLACE(placeId), { signal }),
+        apiClient.get(ENDPOINTS.ADMIN_PLACE_OFFLINE_MAP(placeId), { signal }),
+      ])
+      return { place: place.data.data as { name: string; address?: string; provinceId?: string; updatedAt: string },
+        map: map.data.data as PlaceOfflineMapEntry['offlineMap'] }
+    },
+  })
+}
+
+export async function downloadPlaceMap(placeId: string) {
+  const response = await apiClient.get(`${ENDPOINTS.ADMIN_PLACE_OFFLINE_MAP(placeId)}/file`, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `ban-do-${placeId}.zip`
+  anchor.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

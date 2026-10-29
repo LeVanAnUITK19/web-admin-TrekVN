@@ -42,6 +42,7 @@ export function PlaceReviews({ placeId }: { placeId: string }) {
     onError: () => toast.error('Không thể gỡ đánh giá. Vui lòng thử lại.'),
   })
   return <section className="bg-white rounded-lg border border-border p-6">
+    <a href={`/trekking/reviews?placeId=${placeId}`} className="text-sm text-primary underline block mb-3">Mở trang quản lý đánh giá</a>
     <h2 className="text-lg font-semibold mb-4">Đánh giá & bình luận địa điểm ({data?.total ?? 0})</h2>
     {isLoading && <p>Đang tải đánh giá…</p>}
     {isError && <button onClick={() => refetch()}>Không tải được đánh giá · Thử lại</button>}

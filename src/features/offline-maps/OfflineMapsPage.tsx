@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Upload, Pencil, ExternalLink, Plus, Map, Package, Search, Eye } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Upload, Pencil, ExternalLink, Plus, Map, Package } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -13,42 +13,28 @@ import {
   useOfflineMaps,
   usePublishOfflineMap,
   useOfflineMapFilters,
-  usePlacesOfflineMaps,
 } from './useOfflineMaps'
 import { formatDateTime, formatFileSize } from '@/lib/utils'
-import { ROUTES, getProvinceNameById } from '@/constants'
-import type { OfflineMapPackage, PlaceOfflineMapEntry } from '@/types'
+import { ROUTES } from '@/constants'
+import type { OfflineMapPackage } from '@/types'
+
+import { PlaceMapsPanel } from './PlaceMapsPanel'
 
 type Tab = 'packages' | 'places'
 
 export default function OfflineMapsPage() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<Tab>('packages')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab: Tab = searchParams.get('tab') === 'packages' ? 'packages' : 'places'
+  const setActiveTab = (tab: Tab) => setSearchParams({ tab })
 
   // ── Tab 1: Gói bản đồ vùng (OfflineMapPackage) ──────────────────────────
   const { params, setSearch, setStatus, setPage } = useOfflineMapFilters()
-  const { data: pageData, isLoading, isError, refetch } = useOfflineMaps(params)
+  const { data: pageData, isLoading, isError, refetch } = useOfflineMaps(params, activeTab === 'packages')
   const publishMutation = usePublishOfflineMap()
   const [publishTarget, setPublishTarget] = useState<OfflineMapPackage | null>(null)
 
   const maps = pageData?.data ?? []
-
-  // ── Tab 2: Bản đồ địa điểm (Agent Map Builder) ──────────────────────────
-  const [placeSearch, setPlaceSearch] = useState('')
-  const [placePage, setPlacePage] = useState(1)
-  const {
-    data: placeMapData,
-    isLoading: placeLoading,
-    isError: placeError,
-    refetch: placeRefetch,
-  } = usePlacesOfflineMaps({ search: placeSearch, page: placePage })
-
-  const placeMaps: PlaceOfflineMapEntry[] = placeMapData?.data ?? []
-
-  const formatBounds = (bounds?: PlaceOfflineMapEntry['offlineMap']['bounds']) => {
-    if (!bounds) return '—'
-    return `${bounds.minLat.toFixed(3)}°, ${bounds.minLon.toFixed(3)}° → ${bounds.maxLat.toFixed(3)}°, ${bounds.maxLon.toFixed(3)}°`
-  }
 
   const tabCls = (tab: Tab) =>
     `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
@@ -86,11 +72,6 @@ export default function OfflineMapsPage() {
           <span className="flex items-center gap-2">
             <Map className="w-4 h-4" />
             Bản đồ địa điểm
-            {placeMapData?.total ? (
-              <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/15 text-primary rounded-full">
-                {placeMapData.total}
-              </span>
-            ) : null}
           </span>
         </button>
       </div>
@@ -261,147 +242,7 @@ export default function OfflineMapsPage() {
       {/* ════════════════════════════════════════════════════════════════════
           Tab 2 — Bản đồ địa điểm (Agent Map Builder)
       ════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'places' && (
-        <>
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <strong>Bản đồ địa điểm</strong> — Các bản đồ offline được gắn trực tiếp vào địa điểm trekking
-            bởi <strong>Agent Map Builder</strong>. Khác với gói bản đồ vùng, mỗi bản đồ này thuộc về
-            một địa điểm cụ thể và được tải về khi người dùng mở địa điểm đó.
-          </div>
-
-          <div className="mb-4">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={placeSearch}
-                onChange={(e) => { setPlaceSearch(e.target.value); setPlacePage(1) }}
-                placeholder="Tìm địa điểm..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
-
-          <div className="data-table-container">
-            {placeLoading ? (
-              <div className="p-5">
-                <TableSkeleton rows={4} />
-              </div>
-            ) : placeError ? (
-              <ErrorState retry={placeRefetch} />
-            ) : !placeMaps.length ? (
-              <EmptyState
-                title="Chưa có bản đồ địa điểm"
-                description="Agent Map Builder chưa tạo bản đồ cho địa điểm nào. Vào Agent → Map Builder để khởi tạo."
-              />
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-muted/50 border-b border-border">
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Địa điểm
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Tỉnh/TP
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Phiên bản
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Dung lượng
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Zoom
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Bounds
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Cập nhật
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
-                          Thao tác
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {placeMaps.map((entry: PlaceOfflineMapEntry) => (
-                        <tr key={entry.placeId} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-foreground">{entry.placeName}</p>
-                            {entry.address && (
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-48">
-                                {entry.address}
-                              </p>
-                            )}
-                            <span
-                              className={`text-xs mt-0.5 inline-block ${
-                                entry.status === 'ACTIVE'
-                                  ? 'text-green-600'
-                                  : 'text-muted-foreground'
-                              }`}
-                            >
-                              {entry.status === 'ACTIVE' ? '● Hoạt động' : '○ ' + entry.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {entry.provinceId ? getProvinceNameById(entry.provinceId) : '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                              v{entry.offlineMap.version}
-                            </code>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {entry.offlineMap.sizeBytes
-                              ? formatFileSize(entry.offlineMap.sizeBytes)
-                              : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
-                            {entry.offlineMap.minZoom != null && entry.offlineMap.maxZoom != null
-                              ? `${entry.offlineMap.minZoom} – ${entry.offlineMap.maxZoom}`
-                              : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
-                            {formatBounds(entry.offlineMap.bounds)}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
-                            {formatDateTime(entry.updatedAt)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <button
-                                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded"
-                                title="Xem / Cập nhật bản đồ"
-                                onClick={() =>
-                                  navigate(`/offline-maps/place/${entry.placeId}`)
-                                }
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {placeMapData && placeMapData.totalPages > 1 && (
-                  <Pagination
-                    page={placeMapData.page}
-                    totalPages={placeMapData.totalPages}
-                    total={placeMapData.total}
-                    limit={placeMapData.limit}
-                    onPageChange={setPlacePage}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
+      {activeTab === 'places' && <PlaceMapsPanel />}
 
       {/* ── Confirm publish ──────────────────────────────────────────────── */}
       <ConfirmDialog

@@ -1,3 +1,7 @@
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { usePlace } from '@/features/trekking/places/usePlaces'
+import { getProvinceNameById } from '@/constants'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -46,6 +50,8 @@ interface MapBuilderFormProps {
 }
 
 export function MapBuilderForm({ onSubmit, isLoading }: MapBuilderFormProps) {
+  const [params] = useSearchParams()
+  const { data: selectedPlace } = usePlace(params.get('placeId') ?? '')
   const {
     register,
     handleSubmit,
@@ -68,6 +74,15 @@ export function MapBuilderForm({ onSubmit, isLoading }: MapBuilderFormProps) {
       layers: ['ROADS', 'POI', 'TERRAIN', 'CONTOUR', 'HILLSHADE'],
     },
   })
+
+  useEffect(() => {
+    if (!selectedPlace) return
+    setValue('placeId', selectedPlace.id)
+    setValue('placeName', selectedPlace.name)
+    setValue('locationHint', selectedPlace.address || (selectedPlace.provinceId ? getProvinceNameById(selectedPlace.provinceId) : selectedPlace.province) || '')
+    const bounds = selectedPlace.offlineMap?.bounds
+    if (bounds) setValue('bbox', { minLng: bounds.minLon, minLat: bounds.minLat, maxLng: bounds.maxLon, maxLat: bounds.maxLat })
+  }, [selectedPlace, setValue])
 
   const scope = watch('scope')
   const layers = watch('layers')

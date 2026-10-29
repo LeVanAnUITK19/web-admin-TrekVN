@@ -22,6 +22,7 @@ const RouteFormPage = lazy(() => import('@/features/trekking/routes/RouteFormPag
 const MilestonesPage = lazy(() => import('@/features/trekking/milestones/MilestonesPage'))
 const MilestoneFormPage = lazy(() => import('@/features/trekking/milestones/MilestoneFormPage'))
 const ContributionsPage = lazy(() => import('@/features/contributions/ContributionsPage'))
+const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage'))
 const CommunityPage = lazy(() => import('@/features/community/CommunityPage'))
 const BadgesPage = lazy(() => import('@/features/badges/BadgesPage'))
 const BadgeFormPage = lazy(() => import('@/features/badges/BadgeFormPage'))
@@ -169,6 +170,8 @@ export const router = createBrowserRouter([
         path: ROUTES.CONTRIBUTIONS,
         element: <SuspenseWrapper><ContributionsPage /></SuspenseWrapper>,
       },
+
+      { path: ROUTES.PLACE_REVIEWS, element: <SuspenseWrapper><ReviewsPage /></SuspenseWrapper> },
 
       // ── Community ──────────────────────────────────────────
       {

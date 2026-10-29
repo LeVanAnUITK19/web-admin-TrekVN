@@ -55,6 +55,7 @@ export function AdminSidebar({ collapsed = false, pendingContributions }: AdminS
       badge: pendingContributions,
     },
     { label: 'Bài viết cộng đồng', path: ROUTES.COMMUNITY, icon: MessageSquare },
+    { label: 'Đánh giá địa điểm', path: ROUTES.PLACE_REVIEWS, icon: Star },
     {
       label: 'Gamification',
       icon: TrendingUp,
