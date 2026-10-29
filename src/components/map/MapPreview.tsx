@@ -178,13 +178,14 @@ export function MapPreview({ jobId, placeId, downloadUrl, checksum, fileName, bb
     })
   }, [phase, overlayRoutes])
 
-  // Render overlay milestones
+  // Render overlay milestones - teardrop style markers with name labels
   useEffect(() => {
     if (phase !== 'ready' || !map.current) return
     const currentMap = map.current
 
     // Remove existing overlay milestones
-    if (currentMap.getLayer('overlay-milestones-labels')) currentMap.removeLayer('overlay-milestones-labels')
+    if (currentMap.getLayer('overlay-milestones-name-labels')) currentMap.removeLayer('overlay-milestones-name-labels')
+    if (currentMap.getLayer('overlay-milestones-number-labels')) currentMap.removeLayer('overlay-milestones-number-labels')
     if (currentMap.getLayer('overlay-milestones')) currentMap.removeLayer('overlay-milestones')
     if (currentMap.getSource('overlay-milestones')) currentMap.removeSource('overlay-milestones')
 
@@ -202,31 +203,52 @@ export function MapPreview({ jobId, placeId, downloadUrl, checksum, fileName, bb
       data: { type: 'FeatureCollection', features: milestonesFeatures },
     })
 
+    // Teardrop/pin style marker
     currentMap.addLayer({
       id: 'overlay-milestones',
       type: 'circle',
       source: 'overlay-milestones',
       paint: {
-        'circle-radius': 6,
+        'circle-radius': 8,
         'circle-color': '#ef4444',
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.95,
       },
     })
 
+    // Sequence number inside marker
     currentMap.addLayer({
-      id: 'overlay-milestones-labels',
+      id: 'overlay-milestones-number-labels',
       type: 'symbol',
       source: 'overlay-milestones',
       layout: {
         'text-field': ['get', 'sequence'],
         'text-size': 10,
-        'text-offset': [0, -1.5],
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
       },
       paint: {
         'text-color': '#ffffff',
-        'text-halo-color': '#ef4444',
-        'text-halo-width': 1,
+      },
+    })
+
+    // Milestone name label (small text below marker)
+    currentMap.addLayer({
+      id: 'overlay-milestones-name-labels',
+      type: 'symbol',
+      source: 'overlay-milestones',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-size': 11,
+        'text-offset': [0, 1.5],
+        'text-anchor': 'top',
+        'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+        'text-max-width': 10,
+      },
+      paint: {
+        'text-color': '#1f2937',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 2,
       },
     })
   }, [phase, overlayMilestones])

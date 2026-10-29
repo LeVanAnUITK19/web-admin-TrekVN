@@ -71,29 +71,47 @@ export function PlaceOfflineMapWithOverlays({
     queryKey: ['place-milestones', placeId],
     enabled: !!placeId && showMilestones,
     queryFn: async (): Promise<Array<{ coordinates: GeoPoint; name: string; sequence: number }>> => {
+      console.log('[PlaceOfflineMapWithOverlays] Fetching routes for placeId:', placeId)
+      
       // First get all routes for this place
-      const routesRes = await apiClient.get<{ data: { data: ApiRoute[] } }>('/admin/trekking/routes', {
+      const routesRes = await apiClient.get('/admin/trekking/routes', {
         params: { placeId, status: 'ACTIVE', limit: 100 },
       })
-      const routes = routesRes.data.data.data
+      
+      console.log('[PlaceOfflineMapWithOverlays] Routes response:', routesRes.data)
+      
+      // Handle different response structures
+      const routes = routesRes.data?.data?.data || routesRes.data?.data || routesRes.data || []
+      console.log('[PlaceOfflineMapWithOverlays] Found routes:', routes.length, routes)
 
       // Then fetch milestones for all routes
       const allMilestones: Array<{ coordinates: GeoPoint; name: string; sequence: number }> = []
       for (const route of routes) {
         try {
-          const milestonesRes = await apiClient.get<{ data: { data: ApiMilestone[] } }>(
-            `/admin/trekking/routes/${route.trekkingRouteId}/milestones`
+          const routeId = route.trekkingRouteId || route.id
+          console.log(`[PlaceOfflineMapWithOverlays] Fetching milestones for route ${routeId}`)
+          
+          const milestonesRes = await apiClient.get(
+            `/admin/trekking/routes/${routeId}/milestones`
           )
-          const milestones = milestonesRes.data.data.data.map((raw) => ({
+          console.log(`[PlaceOfflineMapWithOverlays] Milestones response for route ${routeId}:`, milestonesRes.data)
+          
+          // Handle different response structures
+          const rawMilestones = milestonesRes.data?.data?.data || milestonesRes.data?.data || milestonesRes.data || []
+          console.log(`[PlaceOfflineMapWithOverlays] Raw milestones:`, rawMilestones)
+          
+          const milestones = rawMilestones.map((raw: ApiMilestone) => ({
             coordinates: raw.location,
             name: raw.name,
             sequence: raw.sequence,
           }))
+          console.log(`[PlaceOfflineMapWithOverlays] Mapped milestones:`, milestones)
           allMilestones.push(...milestones)
         } catch (error) {
-          console.warn(`Failed to fetch milestones for route ${route.trekkingRouteId}:`, error)
+          console.warn(`Failed to fetch milestones for route ${route.trekkingRouteId || route.id}:`, error)
         }
       }
+      console.log('[PlaceOfflineMapWithOverlays] Total milestones:', allMilestones.length, allMilestones)
       return allMilestones
     },
   })

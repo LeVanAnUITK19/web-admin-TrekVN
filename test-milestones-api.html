@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Milestones API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; margin-top: 0; }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 4px;
+      border-left: 4px solid #3b82f6;
+    }
+    .result h3 { margin-top: 0; color: #1f2937; }
+    pre {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .error {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    .error h3 { color: #dc2626; }
+    .success {
+      border-left-color: #10b981;
+      background: #f0fdf4;
+    }
+    .success h3 { color: #059669; }
+    .info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗺️ Test Milestones API</h1>
+    
+    <div class="info">
+      <strong>Hướng dẫn:</strong>
+      <ol>
+        <li>Nhập Base URL của backend API (mặc định: http://localhost:3000)</li>
+        <li>Chọn endpoint để test</li>
+        <li>Nhập ID nếu cần (place ID hoặc route ID)</li>
+        <li>Click "Test API" để gọi</li>
+      </ol>
+    </div>
+
+    <div class="form-group">
+      <label for="baseUrl">Base URL:</label>
+      <input type="text" id="baseUrl" value="http://localhost:3000" />
+    </div>
+
+    <div class="form-group">
+      <label for="endpoint">Endpoint:</label>
+      <select id="endpoint">
+        <option value="places">GET /admin/trekking/places</option>
+        <option value="place">GET /admin/trekking/places/:id</option>
+        <option value="routes">GET /admin/trekking/routes</option>
+        <option value="route">GET /admin/trekking/routes/:id</option>
+        <option value="route-milestones" selected>GET /admin/trekking/routes/:routeId/milestones</option>
+        <option value="milestones">GET /admin/trekking/milestones</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="idGroup">
+      <label for="resourceId">ID (place ID hoặc route ID):</label>
+      <input type="text" id="resourceId" placeholder="Ví dụ: place-123 hoặc route-456" />
+    </div>
+
+    <div class="form-group" id="placeIdGroup" style="display: none;">
+      <label for="placeId">Place ID (filter):</label>
+      <input type="text" id="placeId" placeholder="Lọc theo place ID" />
+    </div>
+
+    <button id="testBtn" onclick="testAPI()">Test API</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const endpointSelect = document.getElementById('endpoint');
+    const idGroup = document.getElementById('idGroup');
+    const placeIdGroup = document.getElementById('placeIdGroup');
+
+    endpointSelect.addEventListener('change', () => {
+      const value = endpointSelect.value;
+      idGroup.style.display = ['place', 'route', 'route-milestones'].includes(value) ? 'block' : 'none';
+      placeIdGroup.style.display = value === 'routes' ? 'block' : 'none';
+    });
+
+    async function testAPI() {
+      const baseUrl = document.getElementById('baseUrl').value;
+      const endpoint = document.getElementById('endpoint').value;
+      const resourceId = document.getElementById('resourceId').value;
+      const placeId = document.getElementById('placeId').value;
+      const resultDiv = document.getElementById('result');
+      const testBtn = document.getElementById('testBtn');
+
+      testBtn.disabled = true;
+      testBtn.textContent = 'Loading...';
+      resultDiv.innerHTML = '';
+
+      try {
+        let url = '';
+        let params = {};
+
+        switch (endpoint) {
+          case 'places':
+            url = `${baseUrl}/admin/trekking/places`;
+            params = { limit: 10 };
+            break;
+          case 'place':
+            if (!resourceId) throw new Error('Nhập place ID');
+            url = `${baseUrl}/admin/trekking/places/${resourceId}`;
+            break;
+          case 'routes':
+            url = `${baseUrl}/admin/trekking/routes`;
+            params = { limit: 10 };
+            if (placeId) params.placeId = placeId;
+            break;
+          case 'route':
+            if (!resourceId) throw new Error('Nhập route ID');
+            url = `${baseUrl}/admin/trekking/routes/${resourceId}`;
+            break;
+          case 'route-milestones':
+            if (!resourceId) throw new Error('Nhập route ID');
+            url = `${baseUrl}/admin/trekking/routes/${resourceId}/milestones`;
+            break;
+          case 'milestones':
+            url = `${baseUrl}/admin/trekking/milestones`;
+            params = { limit: 10 };
+            break;
+        }
+
+        const queryString = new URLSearchParams(params).toString();
+        const fullUrl = queryString ? `${url}?${queryString}` : url;
+
+        console.log('Fetching:', fullUrl);
+        const response = await fetch(fullUrl);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+        }
+
+        let summary = '';
+        if (endpoint === 'route-milestones') {
+          const milestones = data.data?.data || data.data || [];
+          summary = `<p><strong>Tìm thấy ${milestones.length} cột mốc</strong></p>`;
+          if (milestones.length > 0) {
+            summary += '<ul>';
+            milestones.forEach((m, i) => {
+              summary += `<li>${i+1}. ${m.name} (sequence: ${m.sequence}, type: ${m.type})</li>`;
+            });
+            summary += '</ul>';
+          }
+        } else if (endpoint === 'routes') {
+          const routes = data.data?.data || data.data || [];
+          summary = `<p><strong>Tìm thấy ${routes.length} cung đường</strong></p>`;
+          if (routes.length > 0) {
+            summary += '<ul>';
+            routes.forEach((r, i) => {
+              const id = r.trekkingRouteId || r.id;
+              summary += `<li>${i+1}. ${r.name} (ID: ${id})</li>`;
+            });
+            summary += '</ul>';
+          }
+        } else if (endpoint === 'places') {
+          const places = data.data?.data || data.data || [];
+          summary = `<p><strong>Tìm thấy ${places.length} địa điểm</strong></p>`;
+          if (places.length > 0) {
+            summary += '<ul>';
+            places.forEach((p, i) => {
+              const id = p.trekkingPlaceId || p.id;
+              summary += `<li>${i+1}. ${p.name} (ID: ${id})</li>`;
+            });
+            summary += '</ul>';
+          }
+        }
+
+        resultDiv.innerHTML = `
+          <div class="result success">
+            <h3>✅ Success</h3>
+            ${summary}
+            <p><strong>Full Response:</strong></p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error:', error);
+        resultDiv.innerHTML = `
+          <div class="result error">
+            <h3>❌ Error</h3>
+            <p><strong>${error.message}</strong></p>
+            <pre>${error.stack || ''}</pre>
+          </div>
+        `;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = 'Test API';
+      }
+    }
+
+    // Auto-trigger on page load if URL has params
+    window.addEventListener('load', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auto')) {
+        testAPI();
+      }
+    });
+  </script>
+</body>
+</html>

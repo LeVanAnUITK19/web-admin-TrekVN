@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, MoreHorizontal, Pencil, PowerOff, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, PowerOff, ChevronDown, ChevronRight, Map as MapIcon } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { DIFFICULTY_LABELS, ROUTES } from '@/constants'
 import { useAllRoutes, useUpdateRouteStatus } from './useRoutes'
 import { usePlaces } from '../places/usePlaces'
+import { RouteOfflineMapWithOverlays } from '@/components/map/RouteOfflineMapWithOverlays'
 import type { TrekkingRoute } from '@/types'
 
 export default function RoutesPage() {
@@ -26,6 +27,7 @@ export default function RoutesPage() {
   const updateStatusMutation = useUpdateRouteStatus()
   const [disableTarget, setDisableTarget] = useState<TrekkingRoute | null>(null)
   const [expandedPlaces, setExpandedPlaces] = useState<Set<string>>(new Set())
+  const [expandedRouteMap, setExpandedRouteMap] = useState<string | null>(null)
 
   // Filter routes
   const filteredRoutes = (allRoutes || []).filter(route => {
@@ -62,6 +64,10 @@ export default function RoutesPage() {
       else next.add(placeId)
       return next
     })
+  }
+
+  const toggleRouteMap = (routeId: string) => {
+    setExpandedRouteMap(prev => prev === routeId ? null : routeId)
   }
 
   return (
@@ -160,62 +166,87 @@ export default function RoutesPage() {
                       </thead>
                       <tbody className="divide-y divide-border">
                         {group.routes.map((route, idx) => (
-                          <tr key={route.id} className="hover:bg-muted/20">
-                            <td className="px-4 py-3 text-muted-foreground text-xs">{idx + 1}</td>
-                            <td className="px-4 py-3">
-                              <p className="font-medium text-foreground">{route.name}</p>
-                              {route.description && (
-                                <p className="text-xs text-muted-foreground truncate max-w-md">
-                                  {route.description}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                                {DIFFICULTY_LABELS[route.difficulty] ?? route.difficulty}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">{route.distance} km</td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {route.estimatedDuration ? `${Math.floor(route.estimatedDuration / 60)}h ${route.estimatedDuration % 60}m` : '—'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <StatusBadge status={route.status} />
-                            </td>
-                            <td className="px-4 py-3">
-                              <DropdownMenu.Root>
-                                <DropdownMenu.Trigger asChild>
+                          <>
+                            <tr key={route.id} className="hover:bg-muted/20">
+                              <td className="px-4 py-3 text-muted-foreground text-xs">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-foreground">{route.name}</p>
+                                {route.description && (
+                                  <p className="text-xs text-muted-foreground truncate max-w-md">
+                                    {route.description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                                  {DIFFICULTY_LABELS[route.difficulty] ?? route.difficulty}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">{route.distance} km</td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {route.estimatedDuration ? `${Math.floor(route.estimatedDuration / 60)}h ${route.estimatedDuration % 60}m` : '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={route.status} />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1">
                                   <button
-                                    aria-label={`Thao tác của ${route.name}`}
+                                    onClick={() => toggleRouteMap(route.id)}
                                     className="p-1.5 rounded hover:bg-muted"
+                                    title="Xem bản đồ với cột mốc"
+                                    aria-label="Xem bản đồ với cột mốc"
                                   >
-                                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                    <MapIcon className={`w-4 h-4 ${expandedRouteMap === route.id ? 'text-primary' : 'text-muted-foreground'}`} />
                                   </button>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Portal>
-                                  <DropdownMenu.Content
-                                    align="end"
-                                    className="z-50 min-w-36 bg-white rounded-lg shadow-dropdown border border-border py-1 text-sm"
-                                  >
-                                    <DropdownMenu.Item
-                                      className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted outline-none"
-                                      onSelect={() => navigate(ROUTES.TREKKING_ROUTES_EDIT(route.id))}
-                                    >
-                                      <Pencil className="w-4 h-4" /> Chỉnh sửa
-                                    </DropdownMenu.Item>
-                                    {route.status !== 'DISABLED' && (
-                                      <DropdownMenu.Item
-                                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-red-50 text-red-600 outline-none"
-                                        onSelect={() => setDisableTarget(route)}
+                                  <DropdownMenu.Root>
+                                    <DropdownMenu.Trigger asChild>
+                                      <button
+                                        aria-label={`Thao tác của ${route.name}`}
+                                        className="p-1.5 rounded hover:bg-muted"
                                       >
-                                        <PowerOff className="w-4 h-4" /> Vô hiệu hóa
-                                      </DropdownMenu.Item>
-                                    )}
-                                  </DropdownMenu.Content>
-                                </DropdownMenu.Portal>
-                              </DropdownMenu.Root>
-                            </td>
-                          </tr>
+                                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenu.Trigger>
+                                    <DropdownMenu.Portal>
+                                      <DropdownMenu.Content
+                                        align="end"
+                                        className="z-50 min-w-36 bg-white rounded-lg shadow-dropdown border border-border py-1 text-sm"
+                                      >
+                                        <DropdownMenu.Item
+                                          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted outline-none"
+                                          onSelect={() => navigate(ROUTES.TREKKING_ROUTES_EDIT(route.id))}
+                                        >
+                                          <Pencil className="w-4 h-4" /> Chỉnh sửa
+                                        </DropdownMenu.Item>
+                                        {route.status !== 'DISABLED' && (
+                                          <DropdownMenu.Item
+                                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-red-50 text-red-600 outline-none"
+                                            onSelect={() => setDisableTarget(route)}
+                                          >
+                                            <PowerOff className="w-4 h-4" /> Vô hiệu hóa
+                                          </DropdownMenu.Item>
+                                        )}
+                                      </DropdownMenu.Content>
+                                    </DropdownMenu.Portal>
+                                  </DropdownMenu.Root>
+                                </div>
+                              </td>
+                            </tr>
+                            {/* Map row - shown when expanded */}
+                            {expandedRouteMap === route.id && (
+                              <tr key={`${route.id}-map`}>
+                                <td colSpan={7} className="px-4 py-4 bg-muted/10">
+                                  <RouteOfflineMapWithOverlays
+                                    routeId={route.id}
+                                    routeName={route.name}
+                                    placeId={route.placeId}
+                                    routePath={route.path}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         ))}
                       </tbody>
                     </table>
